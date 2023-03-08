@@ -1,6 +1,5 @@
 #define GPIOB_BASE 0x48000400
 #define RCC_BASE 0x40021000
-#define TIM6 0x40001000
 #define TIM3 0x40000400
 
 #define RCC_AHBENR (*(unsigned int *)(RCC_BASE + 0x14))
@@ -64,15 +63,21 @@ void timerDelay(unsigned int milliseconds) {
 	TIM3_SR &= ~(1 << 1); // RESET SR
 }
 
+void loopLicht()
+{
+	for(int i=0; i < 4; i++)
+	{
+		ledWrite(i,1);
+		timerDelay(500);
+		ledWrite(i,0);
+	}
+}
 int main() {
 	shieldConfig();
 	timerConfig();
 
-	while (1) {
-		ledWrite(0, 1);
-		timerDelay(1000);
-		ledWrite(0, 0);
-		timerDelay(1000);
+	while(1){
+		loopLicht();
 	}
 
 	return 0;
