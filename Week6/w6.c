@@ -97,7 +97,7 @@ void start()
 void bitx(char state)
 {
 	GPIOA_ODR |= (1 << 5);
-	if(state = 1)
+	if(state == 1)
 	{
 		GPIOA_ODR |= (1 << 6);
 	}
