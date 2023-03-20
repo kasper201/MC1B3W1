@@ -2,7 +2,7 @@
 #define GPIOA_BASE 0x48000000
 #define RCC_BASE 0x40021000
 #define TIM3 0x40000400
-#define TIM7 0x40001400
+#define TIM1 0x40012C00
 
 #define RCC_AHBENR (*(unsigned int *)(RCC_BASE + 0x14))
 #define GPIOB_MODER (*(unsigned int *)(GPIOB_BASE + 0x00))
@@ -24,11 +24,13 @@
 #define TIM3_CCMR1 (*(unsigned int *)(TIM3 + 0x18))
 
 #define RCC_APB1RSTR (*(unsigned int *)(RCC_BASE + 0x10))//reset register tim7
-#define TIM7_PSC (*(unsigned int *)(TIM7 + 0x28))
-#define TIM7_CNT (*(unsigned int *)(TIM7 + 0x24))
-#define TIM7_SR (*(unsigned int *)(TIM7 + 0x10))
-#define TIM7_CR1 (*(unsigned int *)(TIM7 + 0x00))
-#define TIM7_EGR (*(unsigned int *)(TIM7 + 0x14))
+#define TIM1_CR1 (*(unsigned int *)(TIM1 + 0x00))
+#define TIM1_EGR (*(unsigned int *)(TIM1 + 0x14))
+#define TIM1_PSC (*(unsigned int *)(TIM1 + 0x28))
+#define TIM1_CNT (*(unsigned int *)(TIM1 + 0x24))
+#define TIM1_CCR1 (*(unsigned int *)(TIM1 + 0x34))
+#define TIM1_SR (*(unsigned int *)(TIM1 + 0x10))
+#define TIM1_CCMR1 (*(unsigned int *)(TIM1 + 0x18))
 
 void shieldConfig() {
 
@@ -47,12 +49,12 @@ void shieldConfig() {
 
 void timerConfig() {
 	RCC_APB1ENR |= (10001 << 1); // Enable TIM3 and TIM7 clock
-	TIM3_PSC = 7; // Set prescaler TIM3
-	TIM7_PSC = 7999; // Set prescaler TIM7
+	TIM3_PSC = 7999; // Set prescaler TIM3
+	TIM1_PSC = 7; // Set prescaler TIM7
 	TIM3_EGR |= (1 << 0);
-	TIM7_EGR |= (1 << 0);
+	TIM1_EGR |= (1 << 0);
 	TIM3_CR1 |= (1 << 0);
-	TIM7_CR1 |= (1 << 0);
+	TIM1_CR1 |= (1 << 0);
 }
 
 void ledWrite(int num, int on) {
@@ -74,12 +76,23 @@ void timerDelay(int milliseconds) {
 	TIM3_SR &= ~(1 << 1); // RESET SR
 }
 
+void delayOne(int milliseconds) {
+	TIM1_CCR1 = milliseconds;
+	TIM1_CNT = 0;
+	while ((TIM1_SR & (1 << 1)) == 0)
+	{
+		sevensegment(1);
+	}
+	TIM1_SR &= ~(1 << 1); // RESET SR
+}
+
+
 void loopLicht()
 {
 	for(int i=0; i < 4; i++)
 	{
 		ledWrite(i,1);
-		timerDelay(50000);
+		timerDelay(500);
 		ledWrite(i,0);
 	}
 }
