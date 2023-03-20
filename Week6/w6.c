@@ -47,7 +47,7 @@ void shieldConfig() {
 
 void timerConfig() {
 	RCC_APB1ENR |= (10001 << 1); // Enable TIM3 and TIM7 clock
-	TIM3_PSC = 7999; // Set prescaler TIM3
+	TIM3_PSC = 7; // Set prescaler TIM3
 	TIM7_PSC = 7999; // Set prescaler TIM7
 	TIM3_EGR |= (1 << 0);
 	TIM7_EGR |= (1 << 0);
@@ -79,46 +79,73 @@ void loopLicht()
 	for(int i=0; i < 4; i++)
 	{
 		ledWrite(i,1);
-		timerDelay(500);
+		timerDelay(50000);
 		ledWrite(i,0);
+	}
+}
+
+void clock(int value)
+{
+	if(value == 0)
+	{
+		GPIOA_ODR &= ~(1 << 5);
+	}
+	else
+	{
+		GPIOA_ODR |= (1 << 5);
+	}
+	timerDelay(1);
+}
+
+void dio(int value)
+{
+	if(value == 1)
+	{
+		GPIOA_ODR &= ~(1 << 6);
+	}
+	else
+	{
+		GPIOA_ODR |= (1 << 6);
 	}
 }
 
 void start()
 {
-	GPIOA_ODR |= (11 << 5);
+	clock(1);
+	dio(1);
 	timerDelay(1);
-	GPIOA_ODR &= ~(1 << 6);
+	dio(0);
 	timerDelay(1);
-	GPIOA_ODR &= ~(1 << 5);
+	clock(0);
 	timerDelay(1);
 }
 
 void bitx(char state)
 {
-	GPIOA_ODR |= (1 << 5);
+	clock(1);
 	if(state == 1)
 	{
-		GPIOA_ODR |= (1 << 6);
+		dio(1);
 	}
 	else
 	{
-		GPIOA_ODR &= ~(1 << 5);
+		dio(0);
 	}
 	timerDelay(1);
-	GPIOA_ODR |= (1 << 5);
+	clock(1);
 	timerDelay(1);
-	GPIOA_ODR &= ~(1 << 5);
+	clock(0);
 	timerDelay(1);
 }
 
 void stop()
 {
-	GPIOA_ODR &= ~(11 << 5);
+	clock(0);
+	dio(0);
 	timerDelay(1);
-	GPIOA_ODR |= (1 << 5);
+	clock(1);
 	timerDelay(1);
-	GPIOA_ODR |= (1 << 6);
+	dio(1);
 	timerDelay(1);
 }
 
@@ -137,13 +164,13 @@ void writetodisplay(int number)
 			{
 				bitx(1);
 			}
-			else if(i < 10)
+			else if(i < 10 && i > 3)
 			{
 				bitx(0);
 			}
 			else
 			{
-				stop();
+
 			}
 		}
 		break;
@@ -159,7 +186,7 @@ void addressdisplay(int display)
 	case 1:
 		for(i = 0; i <= 8; i++)
 		{
-			if((i > 0 && i < 6) || i == 8)
+			if((i > 0 && i < 6) || i == 8) // address display
 			{
 				bitx(0);
 			}
@@ -168,9 +195,9 @@ void addressdisplay(int display)
 				bitx(1);
 			}
 		}
-		for(i = 0; i <= 8; i++)
+		for(i = 0; i <= 8; i++)//set display brightness etc
 		{
-			if(i > 3 && i < 7)
+			if(i > 3 && i < 7 || i == 8)
 			{
 				bitx(0);
 			}
@@ -179,7 +206,6 @@ void addressdisplay(int display)
 				bitx(1);
 			}
 		}
-		stop();
 		break;
 	}
 }
@@ -190,6 +216,7 @@ void sevensegment(int seconds)
 	{
 		addressdisplay(1);
 		writetodisplay(seconds);
+		stop();
 	}
 }
 
@@ -197,7 +224,8 @@ int main() {
 	shieldConfig();
 	timerConfig();
 
-	while(1){
+	while(1)
+	{
 		sevensegment(1);
 		loopLicht();
 	}
