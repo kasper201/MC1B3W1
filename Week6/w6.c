@@ -99,7 +99,7 @@ void clock(int value)
 
 void dio(int value)
 {
-	if(value == 1)
+	if(value == 0)
 	{
 		GPIOA_ODR &= ~(1 << 6);
 	}
@@ -122,7 +122,7 @@ void start()
 
 void bitx(char state)
 {
-	clock(1);
+	clock(0);
 	if(state == 1)
 	{
 		dio(1);
@@ -166,6 +166,8 @@ void addressdisplay()
 
 void writeDisplay()
 {
+	start();
+	addressdisplay();
 	for(int data = 0; data < 4; data++)
 	{
 		for(int byte = 0; byte <= 8; byte++)
@@ -209,6 +211,7 @@ void segmentConfig()
 		}
 	}
 	addressdisplay();
+	stop();
 	writeDisplay();
 }
 
