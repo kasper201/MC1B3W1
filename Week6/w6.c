@@ -149,44 +149,28 @@ void stop()
 	timerDelay(1);
 }
 
-void writetodisplay(int number)
+void addressdisplay()
 {
-	switch(number)
+	for(int ad = 0; ad <= 8; ad++)
 	{
-	case 1:
-		for(int i = 0; i <= 10; i++)
+		if(ad < 6 || ad == 8)
 		{
-			if(i == 0)
-			{
-				start();
-			}
-			else if(i <= 3 )
-			{
-				bitx(1);
-			}
-			else if(i < 10 && i > 3)
-			{
-				bitx(0);
-			}
-			else
-			{
-
-			}
+			bitx(0);
 		}
-		break;
+		else
+		{
+			bitx(1);
+		}
 	}
 }
 
-void addressdisplay(int display)
+void writeDisplay()
 {
-	int i;
-	start();
-	switch(display)
+	for(int data = 0; data < 4; data++)
 	{
-	case 1:
-		for(i = 0; i <= 8; i++)
+		for(int byte = 0; byte <= 8; byte++)
 		{
-			if((i > 0 && i < 6) || i == 8) // address display
+			if(byte >= 7)
 			{
 				bitx(0);
 			}
@@ -195,34 +179,51 @@ void addressdisplay(int display)
 				bitx(1);
 			}
 		}
-		for(i = 0; i <= 8; i++)//set display brightness etc
-		{
-			if(i > 3 && i < 7 || i == 8)
-			{
-				bitx(0);
-			}
-			else
-			{
-				bitx(1);
-			}
-		}
-		break;
 	}
+	stop();
+}
+
+void segmentConfig()
+{
+	start();
+	for(int counter = 0; counter <= 8; counter++) //data command
+	{
+		if(counter != 6)
+		{
+			bitx(0);
+		}
+		else
+		{
+			bitx(1);
+		}
+	}
+	for(int dc = 0; dc <= 8; dc++)
+	{
+		if(dc < 4 || dc == 7)//display control command
+		{
+			bitx(1);
+		}
+		else
+		{
+			bitx(0);
+		}
+	}
+	addressdisplay();
+	writeDisplay();
 }
 
 void sevensegment(int seconds)
 {
 	if(seconds < 10)
 	{
-		addressdisplay(1);
-		writetodisplay(seconds);
-		stop();
+		//addressdisplay();
 	}
 }
 
 int main() {
 	shieldConfig();
 	timerConfig();
+	segmentConfig();
 
 	while(1)
 	{
