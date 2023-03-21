@@ -222,6 +222,8 @@ void segmentConfig()
 			bitx(1);
 		}
 	}
+	stop();
+	start();
 	for(int dc = 0; dc <= 8; dc++)
 	{
 		if(dc < 4 || dc == 7)//display control command
