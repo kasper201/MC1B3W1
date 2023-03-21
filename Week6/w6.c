@@ -49,8 +49,8 @@ void shieldConfig() {
 
 void timerConfig() {
 	RCC_APB1ENR |= (10001 << 1); // Enable TIM3 and TIM7 clock
-	TIM3_PSC = 7999; // Set prescaler TIM3
-	TIM1_PSC = 7; // Set prescaler TIM7
+	TIM3_PSC = 7; // Set prescaler TIM3
+	TIM1_PSC = 7; // Set prescaler TIM1
 	TIM3_EGR |= (1 << 0);
 	TIM1_EGR |= (1 << 0);
 	TIM3_CR1 |= (1 << 0);
@@ -81,7 +81,7 @@ void delayOne(int milliseconds) {
 	TIM1_CNT = 0;
 	while ((TIM1_SR & (1 << 1)) == 0)
 	{
-		sevensegment(1);
+
 	}
 	TIM1_SR &= ~(1 << 1); // RESET SR
 }
@@ -107,7 +107,6 @@ void clock(int value)
 	{
 		GPIOA_ODR |= (1 << 5);
 	}
-	timerDelay(1);
 }
 
 void dio(int value)
@@ -135,6 +134,7 @@ void start()
 
 void bitx(char state)
 {
+
 	clock(0);
 	if(state == 1)
 	{
@@ -166,8 +166,14 @@ void addressdisplay()
 {
 	for(int ad = 0; ad <= 8; ad++)
 	{
-		if(ad < 6 || ad == 8)
+		if(ad <= 5)
 		{
+
+			bitx(0);
+		}
+		else if(ad == 8)
+		{
+			timerDelay(1);
 			bitx(0);
 		}
 		else
@@ -203,7 +209,11 @@ void segmentConfig()
 	start();
 	for(int counter = 0; counter <= 8; counter++) //data command
 	{
-		if(counter != 6)
+		if(counter != 6 && counter != 8)
+		{
+			bitx(0);
+		}
+		else if(counter == 8)
 		{
 			bitx(0);
 		}
@@ -223,8 +233,8 @@ void segmentConfig()
 			bitx(0);
 		}
 	}
-	addressdisplay();
 	stop();
+	timerDelay(10);
 	writeDisplay();
 }
 
@@ -239,7 +249,10 @@ void sevensegment(int seconds)
 int main() {
 	shieldConfig();
 	timerConfig();
+	while(1)
+	{
 	segmentConfig();
+	}
 
 	while(1)
 	{
