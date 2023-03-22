@@ -33,13 +33,6 @@
 #define TIM6_CNT (*(unsigned int *)(TIM6 + 0x24))
 #define TIM6_SR (*(unsigned int *)(TIM6 + 0x10))
 
-#define TIM14_CR1 (*(unsigned int *)(TIM14 + 0x00))
-#define TIM14_EGR (*(unsigned int *)(TIM14 + 0x14))
-#define TIM14_PSC (*(unsigned int *)(TIM14 + 0x28))
-#define TIM14_CNT (*(unsigned int *)(TIM14 + 0x24))
-#define TIM14_CCR1 (*(unsigned int *)(TIM14 + 0x34))
-#define TIM14_SR (*(unsigned int *)(TIM14 + 0x10))
-#define TIM14_CCMR1 (*(unsigned int *)(TIM14 + 0x18))
 
 const char numberInSevenSeg[] = {0b0111111, 0b0110000, 0b1011011, 0b1111001, 0b1110100, 0b1101101, 0b1101111, 0b0111000, 0b1111111, 0b1111101}; //0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
@@ -59,7 +52,7 @@ void shieldConfig() {
 }
 
 void timerConfig() {
-	RCC_APB1ENR |= (11001 << 1); // Enable TIM3, TIM6 and TIM14 clock
+	RCC_APB1ENR |= (1001 << 1); // Enable TIM3, TIM6 and TIM7 clock
 	TIM3_PSC = 7999; // Set prescaler TIM3
 	TIM6_PSC = 3; // Set prescaler TIM6
 	TIM3_EGR |= (1 << 0);
