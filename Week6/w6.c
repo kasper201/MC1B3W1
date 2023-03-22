@@ -291,40 +291,53 @@ void checkButton()
 			switchTime = 0;
 		}
 		buttonBuffer = 0;
+		buttonCounter = 0;
 	}
+}
+
+void timeDisplay()
+{
+	if(switchTime == 1)
+		{
+			time++;
+		}
+		else if(switchTime == 2)
+		{
+
+		}
+		else
+		{
+			time = 0;
+		}
+		sevensegment(time/4);
 }
 
 void timerDelay(int milliseconds) {
 	TIM3_EGR |= (1 << 0);
 	TIM3_CCR1 = milliseconds;
 	TIM3_CNT = 0;
+	checkButton();
 	while ((TIM3_SR & (1 << 1)) == 0)
 	{
 
 	}
 	checkButton();
-	if(switchTime == 1)
-	{
-		time++;
-	}
-	else if(switchTime == 2)
-	{
-
-	}
-	else
-	{
-		time = 0;
-	}
-	sevensegment(time/2);
+	timeDisplay();
 	TIM3_SR &= ~(1 << 1); // RESET SR
 }
 void loopLicht()
 {
-	for(int i=0; i < 4; i++)
+	int i = 0;
+	while(1)
 	{
+		checkButton();
 		ledWrite(i,1);
-		timerDelay(500);
+		timerDelay(495);
 		ledWrite(i,0);
+		checkButton();
+		timeDisplay();
+		i++;
+		i %= 5;
 	}
 }
 
@@ -340,4 +353,3 @@ int main()
 	}
 	return 0;
 }
-
