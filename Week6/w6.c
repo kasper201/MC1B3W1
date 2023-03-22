@@ -4,7 +4,8 @@
 #define GPIOA_BASE 0x48000000
 #define RCC_BASE 0x40021000
 #define TIM3 0x40000400
-#define TIM1 0x40012C00
+#define TIM6 0x40001000
+#define TIM14 0x40002000
 
 #define RCC_AHBENR (*(unsigned int *)(RCC_BASE + 0x14))
 #define GPIOB_MODER (*(unsigned int *)(GPIOB_BASE + 0x00))
@@ -25,14 +26,20 @@
 #define TIM3_SR (*(unsigned int *)(TIM3 + 0x10))
 #define TIM3_CCMR1 (*(unsigned int *)(TIM3 + 0x18))
 
-#define RCC_APB1RSTR (*(unsigned int *)(RCC_BASE + 0x10))//reset register tim7
-#define TIM1_CR1 (*(unsigned int *)(TIM1 + 0x00))
-#define TIM1_EGR (*(unsigned int *)(TIM1 + 0x14))
-#define TIM1_PSC (*(unsigned int *)(TIM1 + 0x28))
-#define TIM1_CNT (*(unsigned int *)(TIM1 + 0x24))
-#define TIM1_CCR1 (*(unsigned int *)(TIM1 + 0x34))
-#define TIM1_SR (*(unsigned int *)(TIM1 + 0x10))
-#define TIM1_CCMR1 (*(unsigned int *)(TIM1 + 0x18))
+
+#define TIM6_CR1 (*(unsigned int *)(TIM6 + 0x00))
+#define TIM6_EGR (*(unsigned int *)(TIM6 + 0x14))
+#define TIM6_PSC (*(unsigned int *)(TIM6 + 0x28))
+#define TIM6_CNT (*(unsigned int *)(TIM6 + 0x24))
+#define TIM6_SR (*(unsigned int *)(TIM6 + 0x10))
+
+#define TIM14_CR1 (*(unsigned int *)(TIM14 + 0x00))
+#define TIM14_EGR (*(unsigned int *)(TIM14 + 0x14))
+#define TIM14_PSC (*(unsigned int *)(TIM14 + 0x28))
+#define TIM14_CNT (*(unsigned int *)(TIM14 + 0x24))
+#define TIM14_CCR1 (*(unsigned int *)(TIM14 + 0x34))
+#define TIM14_SR (*(unsigned int *)(TIM14 + 0x10))
+#define TIM14_CCMR1 (*(unsigned int *)(TIM14 + 0x18))
 
 const char numberInSevenSeg[] = {0b0111111, 0b0110000, 0b1011011, 0b1111001, 0b1110100, 0b1101101, 0b1101111, 0b0111000, 0b1111111, 0b1111101}; //0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
@@ -52,13 +59,13 @@ void shieldConfig() {
 }
 
 void timerConfig() {
-	RCC_APB1ENR |= (10001 << 1); // Enable TIM3 and TIM7 clock
-	TIM3_PSC = 7; // Set prescaler TIM3
-	TIM1_PSC = 7; // Set prescaler TIM1
+	RCC_APB1ENR |= (11001 << 1); // Enable TIM3, TIM6 and TIM14 clock
+	TIM3_PSC = 7999; // Set prescaler TIM3
+	TIM6_PSC = 3; // Set prescaler TIM6
 	TIM3_EGR |= (1 << 0);
-	TIM1_EGR |= (1 << 0);
+	TIM6_EGR |= (1 << 0);
 	TIM3_CR1 |= (1 << 0);
-	TIM1_CR1 |= (1 << 0);
+	TIM6_CR1 |= (1 << 0);
 }
 
 void ledWrite(int num, int on) {
@@ -71,6 +78,7 @@ void ledWrite(int num, int on) {
 }
 
 void timerDelay(int milliseconds) {
+	TIM3_EGR |= (1 << 0);
 	TIM3_CCR1 = milliseconds;
 	TIM3_CNT = 0;
 	while ((TIM3_SR & (1 << 1)) == 0)
@@ -81,13 +89,12 @@ void timerDelay(int milliseconds) {
 }
 
 void delayOne(int milliseconds) {
-	TIM1_CCR1 = milliseconds;
-	TIM1_CNT = 0;
-	while ((TIM1_SR & (1 << 1)) == 0)
+	TIM6_EGR |=(1 << 0);
+	TIM6_CNT = 0;
+	while (TIM6_CNT < milliseconds)
 	{
 
 	}
-	TIM1_SR &= ~(1 << 1); // RESET SR
 }
 
 
@@ -129,7 +136,7 @@ void start()
 {
 	clock(1);
 	dio(1);
-	timerDelay(1);
+	delayOne(1);
 	dio(0);
 	timerDelay(1);
 	clock(0);
