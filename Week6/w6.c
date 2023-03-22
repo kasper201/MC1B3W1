@@ -337,7 +337,7 @@ void loopLicht()
 		checkButton();
 		timeDisplay();
 		i++;
-		i %= 5;
+		i %= 4;
 	}
 }
 
