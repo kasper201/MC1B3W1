@@ -278,18 +278,11 @@ void segmentConfig()
 
 void sevensegment(int seconds)
 {
-	if(seconds < 10)
-	{
-		writeDisplay(0,0,0,seconds);
-	}
-	else
-	{
-		int tensOfMinutes = (seconds/60)/10;
-		int singleMinutes = (seconds/60)%10;
-		int tensOfSeconds = (seconds%60)/10;
-		int singleSeconds = seconds%10;
-		writeDisplay(tensOfMinutes,singleMinutes,tensOfSeconds, singleSeconds);
-	}
+	int tensOfMinutes = (seconds/60)/10;
+	int singleMinutes = (seconds/60)%10;
+	int tensOfSeconds = (seconds%60)/10;
+	int singleSeconds = seconds%10;
+	writeDisplay(tensOfMinutes,singleMinutes,tensOfSeconds, singleSeconds);
 }
 
 int main() {
