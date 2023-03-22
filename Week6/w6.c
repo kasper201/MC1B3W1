@@ -33,6 +33,10 @@
 #define TIM6_CNT (*(unsigned int *)(TIM6 + 0x24))
 #define TIM6_SR (*(unsigned int *)(TIM6 + 0x10))
 
+int time = 0;
+int switchTime = 0;
+int buttonCounter = 0;
+int buttonBuffer = 0;
 
 const char numberInSevenSeg[] = {0b0111111, 0b0110000, 0b1011011, 0b1111001, 0b1110100, 0b1101101, 0b1101111, 0b0111000, 0b1111111, 0b1111101}; //0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
@@ -52,7 +56,7 @@ void shieldConfig() {
 }
 
 void timerConfig() {
-	RCC_APB1ENR |= (1001 << 1); // Enable TIM3, TIM6 and TIM7 clock
+	RCC_APB1ENR |= 0b10010; // Enable TIM3, TIM6
 	TIM3_PSC = 7999; // Set prescaler TIM3
 	TIM6_PSC = 3; // Set prescaler TIM6
 	TIM3_EGR |= (1 << 0);
@@ -61,24 +65,8 @@ void timerConfig() {
 	TIM6_CR1 |= (1 << 0);
 }
 
-void ledWrite(int num, int on) {
-	int ledsArray[] = { 3, 5, 4, 6 };
-	if (on == 1) {
-		GPIOB_ODR |= (1 << ledsArray[num]); // turn on led corresponding to location num in array
-	} else {
-		GPIOB_ODR &= ~(1 << ledsArray[num]); // turn off led corresponding to location num in array
-	}
-}
-
-void timerDelay(int milliseconds) {
-	TIM3_EGR |= (1 << 0);
-	TIM3_CCR1 = milliseconds;
-	TIM3_CNT = 0;
-	while ((TIM3_SR & (1 << 1)) == 0)
-	{
-
-	}
-	TIM3_SR &= ~(1 << 1); // RESET SR
+int buttonRead() {
+	return (~(GPIOB_IDR >> 8)) & 1; //
 }
 
 void delayOne(int milliseconds) {
@@ -87,17 +75,6 @@ void delayOne(int milliseconds) {
 	while (TIM6_CNT < milliseconds)
 	{
 
-	}
-}
-
-
-void loopLicht()
-{
-	for(int i=0; i < 4; i++)
-	{
-		ledWrite(i,1);
-		timerDelay(500);
-		ledWrite(i,0);
 	}
 }
 
@@ -131,9 +108,9 @@ void start()
 	dio(1);
 	delayOne(1);
 	dio(0);
-	timerDelay(1);
+	delayOne(1);
 	clock(0);
-	timerDelay(1);
+	delayOne(1);
 }
 
 void bitx(char state)
@@ -148,22 +125,22 @@ void bitx(char state)
 	{
 		dio(0);
 	}
-	timerDelay(1);
+	delayOne(1);
 	clock(1);
-	timerDelay(1);
+	delayOne(1);
 	clock(0);
-	timerDelay(1);
+	delayOne(1);
 }
 
 void stop()
 {
 	clock(0);
 	dio(0);
-	timerDelay(1);
+	delayOne(1);
 	clock(1);
-	timerDelay(1);
+	delayOne(1);
 	dio(1);
-	timerDelay(1);
+	delayOne(1);
 }
 
 void addressdisplay()
@@ -177,7 +154,7 @@ void addressdisplay()
 		}
 		else if(ad == 8)
 		{
-			timerDelay(1);
+			delayOne(1);
 			bitx(0);
 		}
 		else
@@ -242,11 +219,20 @@ void writeDisplay(int screen4, int screen3, int screen2, int screen1)
 	stop();
 }
 
+void sevensegment(int seconds)
+{
+	int tensOfMinutes = (seconds/60)/10;
+	int singleMinutes = (seconds/60)%10;
+	int tensOfSeconds = (seconds%60)/10;
+	int singleSeconds = seconds%10;
+	writeDisplay(tensOfMinutes,singleMinutes,tensOfSeconds, singleSeconds);
+}
+
 void segmentConfig()
 {
 	start();
 	for(int counter = 0; counter <= 8; counter++) //data command
-			{
+	{
 		if(counter != 6 && counter != 8)
 		{
 			bitx(0);
@@ -259,7 +245,7 @@ void segmentConfig()
 		{
 			bitx(1);
 		}
-			}
+	}
 	stop();
 	start();
 	for(int dc = 0; dc <= 8; dc++)
@@ -274,27 +260,87 @@ void segmentConfig()
 		}
 	}
 	stop();
+	sevensegment(0);
 }
 
-void sevensegment(int seconds)
+void ledWrite(int num, int on) {
+	int ledsArray[] = { 3, 5, 4, 6 };
+	if (on == 1) {
+		GPIOB_ODR |= (1 << ledsArray[num]); // turn on led corresponding to location num in array
+	} else {
+		GPIOB_ODR &= ~(1 << ledsArray[num]); // turn off led corresponding to location num in array
+	}
+}
+
+void checkButton()
 {
-	int tensOfMinutes = (seconds/60)/10;
-	int singleMinutes = (seconds/60)%10;
-	int tensOfSeconds = (seconds%60)/10;
-	int singleSeconds = seconds%10;
-	writeDisplay(tensOfMinutes,singleMinutes,tensOfSeconds, singleSeconds);
+	int buttonPressed = buttonRead();
+	if(buttonPressed == 1)
+	{
+		buttonBuffer = 1;
+		buttonCounter++;
+	}
+	else
+	{
+		if(buttonCounter <= 4 && buttonBuffer == 1)
+		{
+			if(switchTime != 1)
+				switchTime = 1;
+			else
+				switchTime = 2;
+		}
+		else if(buttonCounter > 4)
+		{
+			switchTime = 0;
+		}
+		buttonBuffer = 0;
+	}
 }
 
-int main() {
+void timerDelay(int milliseconds) {
+	TIM3_EGR |= (1 << 0);
+	TIM3_CCR1 = milliseconds;
+	TIM3_CNT = 0;
+	while ((TIM3_SR & (1 << 1)) == 0)
+	{
+
+	}
+	checkButton();
+	if(switchTime == 1)
+	{
+		time++;
+	}
+	else if(switchTime == 2)
+	{
+
+	}
+	else
+	{
+		time = 0;
+	}
+	sevensegment(time/2);
+	TIM3_SR &= ~(1 << 1); // RESET SR
+}
+void loopLicht()
+{
+	for(int i=0; i < 4; i++)
+	{
+		ledWrite(i,1);
+		timerDelay(500);
+		ledWrite(i,0);
+	}
+}
+
+int main()
+{
 	shieldConfig();
 	timerConfig();
 	segmentConfig();
 
 	while(1)
 	{
-		sevensegment(0);
 		loopLicht();
 	}
-
 	return 0;
 }
+
