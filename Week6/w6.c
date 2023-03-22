@@ -1,3 +1,5 @@
+#include <math.h>
+
 #define GPIOB_BASE 0x48000400
 #define GPIOA_BASE 0x48000000
 #define RCC_BASE 0x40021000
@@ -31,6 +33,8 @@
 #define TIM1_CCR1 (*(unsigned int *)(TIM1 + 0x34))
 #define TIM1_SR (*(unsigned int *)(TIM1 + 0x10))
 #define TIM1_CCMR1 (*(unsigned int *)(TIM1 + 0x18))
+
+const char numberInSevenSeg[] = {0b0111111, 0b0110000, 0b1011011, 0b1111001, 0b1110100, 0b1101101, 0b1101111, 0b0111000, 0b1111111, 0b1111101}; //0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
 void shieldConfig() {
 
@@ -183,22 +187,56 @@ void addressdisplay()
 	}
 }
 
-void writeDisplay()
+void writeDisplay(int screen4, int screen3, int screen2, int screen1)
 {
 	start();
 	addressdisplay();
-	for(int data = 0; data < 4; data++)
+	for(int byte = 0; byte <= 8; byte++)
 	{
-		for(int byte = 0; byte <= 8; byte++)
+		if(byte >= 7 || !(numberInSevenSeg[screen1] & (1 << byte)))//if bit in location its bitshifting to is the same then bitx(1) else bitx(0);
 		{
-			if(byte >= 7)
-			{
-				bitx(0);
-			}
-			else
-			{
-				bitx(1);
-			}
+			bitx(0);
+		}
+		else
+		{
+			bitx(1);
+		}
+	}
+	for(int byte = 0; byte <= 8; byte++)
+	{
+		if(byte == 7)
+		{
+			bitx(1);
+		}
+		else if(byte >= 8 || !(numberInSevenSeg[screen2] & (1 << byte)))
+		{
+			bitx(0);
+		}
+		else
+		{
+			bitx(1);
+		}
+	}
+	for(int byte = 0; byte <= 8; byte++)
+	{
+		if(byte >= 7 || !(numberInSevenSeg[screen3] & (1 << byte)))
+		{
+			bitx(0);
+		}
+		else
+		{
+			bitx(1);
+		}
+	}
+	for(int byte = 0; byte <= 8; byte++)
+	{
+		if(byte >= 7 || !(numberInSevenSeg[screen4] & (1 << byte)))
+		{
+			bitx(0);
+		}
+		else
+		{
+			bitx(1);
 		}
 	}
 	stop();
@@ -208,7 +246,7 @@ void segmentConfig()
 {
 	start();
 	for(int counter = 0; counter <= 8; counter++) //data command
-	{
+			{
 		if(counter != 6 && counter != 8)
 		{
 			bitx(0);
@@ -221,7 +259,7 @@ void segmentConfig()
 		{
 			bitx(1);
 		}
-	}
+			}
 	stop();
 	start();
 	for(int dc = 0; dc <= 8; dc++)
@@ -236,29 +274,32 @@ void segmentConfig()
 		}
 	}
 	stop();
-	timerDelay(10);
-	writeDisplay();
 }
 
 void sevensegment(int seconds)
 {
 	if(seconds < 10)
 	{
-		//addressdisplay();
+		writeDisplay(0,0,0,seconds);
+	}
+	else
+	{
+		int tensOfMinutes = (seconds/60)/10;
+		int singleMinutes = (seconds/60)%10;
+		int tensOfSeconds = (seconds%60)/10;
+		int singleSeconds = seconds%10;
+		writeDisplay(tensOfMinutes,singleMinutes,tensOfSeconds, singleSeconds);
 	}
 }
 
 int main() {
 	shieldConfig();
 	timerConfig();
-	while(1)
-	{
 	segmentConfig();
-	}
 
 	while(1)
 	{
-		sevensegment(1);
+		sevensegment(0);
 		loopLicht();
 	}
 
