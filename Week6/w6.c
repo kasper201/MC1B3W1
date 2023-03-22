@@ -3,7 +3,6 @@
 #define RCC_BASE 0x40021000
 #define TIM3 0x40000400
 #define TIM6 0x40001000
-#define TIM14 0x40002000
 
 #define RCC_AHBENR (*(unsigned int *)(RCC_BASE + 0x14))
 #define GPIOB_MODER (*(unsigned int *)(GPIOB_BASE + 0x00))
