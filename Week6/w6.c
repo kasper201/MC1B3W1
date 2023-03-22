@@ -1,5 +1,3 @@
-#include <math.h>
-
 #define GPIOB_BASE 0x48000400
 #define GPIOA_BASE 0x48000000
 #define RCC_BASE 0x40021000
