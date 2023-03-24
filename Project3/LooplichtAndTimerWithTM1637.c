@@ -66,12 +66,12 @@ void shieldConfig() {
 
 
 void timerConfig() {
-	RCC_APB1ENR |= 0b110010; // Enable TIM3, TIM6 & TIM14
+	RCC_APB1ENR |= 0b100010010; // Enable TIM3, TIM6 & TIM14
 	RCC_APB2ENR |= (1 << 17);
 	//prescalers
 	TIM3_PSC = 7999; // Set prescaler TIM3
 	TIM6_PSC = 3; // Set prescaler TIM6
-	TIM6_PSC = 7999; // Set prescaler TIM 14 with accuracy of 1ms
+	TIM14_PSC = 7999; // Set prescaler TIM 14 with accuracy of 1ms
 	TIM16_PSC = 7999; // Set prescaler TIM 16 with accuracy of 1ms
 	//egr's
 	TIM3_EGR |= (1 << 0);
@@ -82,7 +82,7 @@ void timerConfig() {
 	TIM3_CR1 |= (1 << 0);
 	TIM6_CR1 |= (1 << 0);
 	TIM14_CR1 |= (1 << 0);
-	TIM16_CR1 |= (1 << 0);
+	//TIM16_CR1 |= (1 << 0); Starting timer 16 only when necessary
 }
 
 int buttonRead() {
@@ -312,11 +312,11 @@ int checkButton()
 	 * 3 is ingedrukt en niet aan het tellen en
 	 * 4 is resetting (knop tijd > 1S)*/
 	int buttonPressed = buttonRead();
-	if((state == 1 || state == 3) && timeDelay(1000) == 1)
+	if(((state == 1) || (state == 3)) && (timeDelay(1000) == 1) && buttonPressed)
 	{
 		state = 4;
 	}
-	else if(buttonPressed == 1 && state == 0)
+	else if(buttonPressed && (state == 0))
 	{
 		if(state == 0)
 		{
@@ -325,11 +325,12 @@ int checkButton()
 		}
 		state = 1;
 	}
-	else if(buttonPressed != 1 && state == 1)
+	else if((buttonPressed == 0) && (state == 1))
 	{
 		state = 2;
+		TIM14_CNT = 0;
 	}
-	else if(buttonPressed == 1 && state == 2)
+	else if(buttonPressed && (state == 2))
 	{
 		if(state == 2)
 		{
@@ -338,9 +339,14 @@ int checkButton()
 		}
 		state = 3;
 	}
-	else if(state != 3 && state != 4)
+	else if((buttonPressed == 0) && (state == 3))
 	{
 		state = 0;
+	}
+	else if((buttonPressed == 0) && (state == 4))
+	{
+		state = 0;
+		TIM14_CNT = 0;
 	}
 	return state;
 }
@@ -363,7 +369,7 @@ int timer(int milliseconds) // hier
 	if((TIM16_SR & (1 << 1)) != 0)
 	{
 		TIM16_SR &= ~(1 << 1);
-		TIM16_CNT = 0;
+		TIM16_CNT -= 1000;
 		return 1;
 	}
 	return 0;
@@ -374,23 +380,26 @@ void timeDisplay(int state)
 	static int time = 0;
 	if(state == 0 || state == 3)
 	{
-
+		TIM16_CR1 &= ~(1 << 0);
 	}
 	else if(state == 1 || state == 2)
 	{
-		/*if(timer(1000) == 1)
+		TIM16_CR1 |= (1 << 0);
+		if(timer(1000) == 1)
 		{
+
 			time++;
-		}*/
+		}
 	}
 	else if(state == 4)
 	{
+		TIM16_CR1 &= ~(1 << 0);
 		time = 0;
 	}
 	sevensegment(time);
 }
 
-void loopLicht()
+int loopLicht()
 {
 	static int i = 0;
 	ledWrite(i,1);
@@ -402,6 +411,7 @@ void loopLicht()
 		i++;
 	}
 	i %= 4;
+	return i;
 }
 
 int main()
@@ -413,8 +423,8 @@ int main()
 	while(1)
 	{
 		int state = checkButton();
-		loopLicht();
 		timeDisplay(state);
+		loopLicht();
 	}
 	return 0;
 }
