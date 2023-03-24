@@ -89,9 +89,9 @@ int buttonRead() {
 	return (~(GPIOB_IDR >> 8)) & 1; //
 }
 
-void delayOne(int milliseconds) {
+void delayOne(int microseconds) {
 	TIM6_CNT = 0;
-	while (TIM6_CNT < milliseconds)
+	while (TIM6_CNT < microseconds)
 	{
 
 	}
