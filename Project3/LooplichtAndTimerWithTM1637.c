@@ -3,6 +3,8 @@
 #define RCC_BASE 0x40021000
 #define TIM3 0x40000400
 #define TIM6 0x40001000
+#define TIM14 0x40002000
+#define TIM16 0x40014400
 
 #define RCC_AHBENR (*(unsigned int *)(RCC_BASE + 0x14))
 #define GPIOB_MODER (*(unsigned int *)(GPIOB_BASE + 0x00))
@@ -23,6 +25,12 @@
 #define TIM3_SR (*(unsigned int *)(TIM3 + 0x10))
 #define TIM3_CCMR1 (*(unsigned int *)(TIM3 + 0x18))
 
+#define TIM14_CR1 (*(unsigned int *)(TIM14 + 0x00))
+#define TIM14_EGR (*(unsigned int *)(TIM14 + 0x14))
+#define TIM14_PSC (*(unsigned int *)(TIM14 + 0x28))
+#define TIM14_CNT (*(unsigned int *)(TIM14 + 0x24))
+#define TIM14_CCR1 (*(unsigned int *)(TIM14 + 0x34))
+#define TIM14_SR (*(unsigned int *)(TIM14 + 0x10))
 
 #define TIM6_CR1 (*(unsigned int *)(TIM6 + 0x00))
 #define TIM6_EGR (*(unsigned int *)(TIM6 + 0x14))
@@ -30,10 +38,13 @@
 #define TIM6_CNT (*(unsigned int *)(TIM6 + 0x24))
 #define TIM6_SR (*(unsigned int *)(TIM6 + 0x10))
 
-int time = 0;
-int switchTime = 0;
-int buttonCounter = 0;
-int buttonBuffer = 0;
+#define RCC_APB2ENR (*(unsigned int *) (RCC_BASE + 0x18))
+#define TIM16_CR1 (*(unsigned int *)(TIM16 + 0x00))
+#define TIM16_EGR (*(unsigned int *)(TIM16 + 0x14))
+#define TIM16_PSC (*(unsigned int *)(TIM16 + 0x28))
+#define TIM16_CNT (*(unsigned int *)(TIM16 + 0x24))
+#define TIM16_SR (*(unsigned int *)(TIM16 + 0x10))
+#define TIM16_CCR1 (*(unsigned int *)(TIM16 + 0x34))
 
 const char numberInSevenSeg[] = {0b0111111, 0b0110000, 0b1011011, 0b1111001, 0b1110100, 0b1101101, 0b1101111, 0b0111000, 0b1111111, 0b1111101}; //0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
@@ -52,14 +63,26 @@ void shieldConfig() {
 	GPIOA_MODER |= (1 << (5 * 2)) | (1 << (6 * 2)); //5 is clock 6 is DIO
 }
 
+
+
 void timerConfig() {
-	RCC_APB1ENR |= 0b10010; // Enable TIM3, TIM6
+	RCC_APB1ENR |= 0b110010; // Enable TIM3, TIM6 & TIM14
+	RCC_APB2ENR |= (1 << 17);
+	//prescalers
 	TIM3_PSC = 7999; // Set prescaler TIM3
 	TIM6_PSC = 3; // Set prescaler TIM6
+	TIM6_PSC = 7999; // Set prescaler TIM 14 with accuracy of 1ms
+	TIM16_PSC = 7999; // Set prescaler TIM 16 with accuracy of 1ms
+	//egr's
 	TIM3_EGR |= (1 << 0);
 	TIM6_EGR |= (1 << 0);
+	TIM14_EGR |= (1 << 0);
+	TIM16_EGR |= (1 << 0);
+	//cr1's
 	TIM3_CR1 |= (1 << 0);
 	TIM6_CR1 |= (1 << 0);
+	TIM14_CR1 |= (1 << 0);
+	TIM16_CR1 |= (1 << 0);
 }
 
 int buttonRead() {
@@ -67,7 +90,6 @@ int buttonRead() {
 }
 
 void delayOne(int milliseconds) {
-	TIM6_EGR |=(1 << 0);
 	TIM6_CNT = 0;
 	while (TIM6_CNT < milliseconds)
 	{
@@ -269,76 +291,117 @@ void ledWrite(int num, int on) {
 	}
 }
 
-void checkButton()
+int timeDelay(int milliseconds) //hier
 {
-	int buttonPressed = buttonRead();
-	if(buttonPressed == 1)
+	TIM14_CCR1 = milliseconds;
+	if((TIM14_SR & (1 << 1)) != 0)
 	{
-		buttonBuffer = 1;
-		buttonCounter++;
+		TIM14_SR &= ~(1 << 1);
+		TIM14_CNT = 0;
+		return 1;
 	}
-	else
-	{
-		if(buttonCounter <= 4 && buttonBuffer == 1)
-		{
-			if(switchTime != 1)
-				switchTime = 1;
-			else
-				switchTime = 2;
-		}
-		else if(buttonCounter > 4)
-		{
-			switchTime = 0;
-		}
-		buttonBuffer = 0;
-		buttonCounter = 0;
-	}
+	return 0;
 }
 
-void timeDisplay()
+int checkButton()
 {
-	if(switchTime == 1)
+	static int state = 0;
+	/* 0 is niet ingedrukt en niet tellen,
+	 * 1 is ingedrukt en aan het tellen,
+	 * 2 is los en aan het tellen,
+	 * 3 is ingedrukt en niet aan het tellen en
+	 * 4 is resetting (knop tijd > 1S)*/
+	int buttonPressed = buttonRead();
+	if((state == 1 || state == 3) && timeDelay(1000) == 1)
+	{
+		state = 4;
+	}
+	else if(buttonPressed == 1 && state == 0)
+	{
+		if(state == 0)
+		{
+			TIM14_SR &= ~(1 << 1);
+			TIM14_CNT = 0;
+		}
+		state = 1;
+	}
+	else if(buttonPressed != 1 && state == 1)
+	{
+		state = 2;
+	}
+	else if(buttonPressed == 1 && state == 2)
+	{
+		if(state == 2)
+		{
+			TIM14_SR &= ~(1 << 1);
+			TIM14_CNT = 0;
+		}
+		state = 3;
+	}
+	else if(state != 3 && state != 4)
+	{
+		state = 0;
+	}
+	return state;
+}
+
+int timerDelay(int milliseconds)
+{
+	TIM3_CCR1 = milliseconds;
+	if((TIM3_SR & (1 << 1)) != 0)
+	{
+		TIM3_SR &= ~(1 << 1);
+		TIM3_CNT = 0;
+		return 1;
+	}
+	return 0;
+}
+
+int timer(int milliseconds) // hier
+{
+	TIM16_CCR1 = milliseconds;
+	if((TIM16_SR & (1 << 1)) != 0)
+	{
+		TIM16_SR &= ~(1 << 1);
+		TIM16_CNT = 0;
+		return 1;
+	}
+	return 0;
+}
+
+void timeDisplay(int state)
+{
+	static int time = 0;
+	if(state == 0 || state == 3)
+	{
+
+	}
+	else if(state == 1 || state == 2)
+	{
+		/*if(timer(1000) == 1)
 		{
 			time++;
-		}
-		else if(switchTime == 2)
-		{
-
-		}
-		else
-		{
-			time = 0;
-		}
-		sevensegment(time/4);
-}
-
-void timerDelay(int milliseconds) {
-	TIM3_EGR |= (1 << 0);
-	TIM3_CCR1 = milliseconds;
-	TIM3_CNT = 0;
-	checkButton();
-	while ((TIM3_SR & (1 << 1)) == 0)
-	{
-
+		}*/
 	}
-	checkButton();
-	timeDisplay();
-	TIM3_SR &= ~(1 << 1); // RESET SR
+	else if(state == 4)
+	{
+		time = 0;
+	}
+	sevensegment(time);
 }
+
 void loopLicht()
 {
-	int i = 0;
-	while(1)
+	static int i = 0;
+	ledWrite(i,1);
+	ledWrite(i-1,0);
+	if(i == 0)
+		ledWrite(3, 0);
+	if(timerDelay(500) == 1)
 	{
-		checkButton();
-		ledWrite(i,1);
-		timerDelay(495);
-		ledWrite(i,0);
-		checkButton();
-		timeDisplay();
 		i++;
-		i %= 4;
 	}
+	i %= 4;
 }
 
 int main()
@@ -349,7 +412,9 @@ int main()
 
 	while(1)
 	{
+		int state = checkButton();
 		loopLicht();
+		timeDisplay(state);
 	}
 	return 0;
 }
